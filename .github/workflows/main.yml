@@ -1,15 +1,55 @@
-# Use a base image that supports systemd, for example, Ubuntu
-FROM ubuntu:20.04
+name: Ubuntu SSH
 
-# Install necessary packages
-RUN apt-get update && \
-apt-get install -y shellinabox && \
-apt-get install -y systemd && \
-apt-get clean && \
-rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN echo 'root:root' | chpasswd
-# Expose the web-based terminal port
-EXPOSE 4200
+on: 
+  workflow_dispatch:
+    inputs:
+      authuncationcode:
+        description: 'DISPLAY= /opt/google/chrome-remote-desktop/start-host --code="4/0AeaYSHACXZcUmSkK2SZg5tShWZ4LnNSeVU1my3SLpivY9CLn1fXY3g9xUdv6Y302qLFw9A" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$(hostname)'
+        required: true
+      pin:
+        description: '200008)'
+        required: true
+      authtoken:
+        description: '1dGlTIr5Xnwj063lZpEaR1R0i3k_e9Qgn3YhjbuCVjw6vtK3'
+        required: true
+      computername:
+        description: 'IsIt?'
+        default: 'ubuntu'
+        required: true
+      username:
+        description: 'user'
+        default: 'user'
+        required: true
+      password:
+        description: 'younes2999'
+        default: 'root'
+        required: true
 
-# Start shellinabox
-CMD ["/usr/bin/shellinaboxd", "-t", "-s", "/:LOGIN"]
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.0.2
+    - name: Mask Code & Pin.
+      run: |
+        _Token=$(jq -r '.inputs.authtoken' $GITHUB_EVENT_PATH)
+        _CName=$(jq -r '.inputs.computername' $GITHUB_EVENT_PATH)
+        _Pass=$(jq -r '.inputs.password' $GITHUB_EVENT_PATH)
+        echo ::add-mask::$_Token
+        echo ::add-mask::$_CName
+        echo ::add-mask::$_Pass
+        echo NGROK_TOKEN="$_Token" >> $GITHUB_ENV
+        echo ComputerName="$_CName" >> $GITHUB_ENV
+        echo Password="$_Pass" >> $GITHUB_ENV
+    - name: Setup Environment
+      run: |
+        sudo apt-get update
+        bash Setup.sh "${{ env.NGROK_TOKEN }}" "${{ env.ComputerName }}" "${{ github.event.inputs.username }}" "${{ env.Password }}"
+    - name: IP for Connect to your SSH.
+      run: bash Ip.sh "${{ github.event.inputs.username }}"
+    - name: Keep Alive.
+      run: ping 127.0.0.1 > null
